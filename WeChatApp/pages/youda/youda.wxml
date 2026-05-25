@@ -1,0 +1,135 @@
+<!-- pages/youda/youda.wxml -->
+<view class="page">
+  <!-- Segmented Control -->
+  <view class="tabs-bar">
+    <view
+      wx:for="{{tabs}}"
+      wx:key="index"
+      class="tab-item {{activeTab === index ? 'active' : ''}}"
+      data-index="{{index}}"
+      bindtap="switchTab"
+    >
+      {{item}}
+    </view>
+  </view>
+
+  <!-- Post List -->
+  <scroll-view scroll-y class="post-list" enhanced show-scrollbar="{{false}}">
+    <view class="post-card" wx:for="{{posts}}" wx:key="_id">
+      <!-- Header -->
+      <view class="post-header">
+        <image class="avatar" src="{{item.avatar}}" mode="aspectFill" />
+        <view class="post-user">
+          <text class="username">{{item.username}}</text>
+          <text class="time">{{item.displayTime}}</text>
+        </view>
+        <view class="follow-btn" wx:if="{{item._openid !== myOpenid}}" data-openid="{{item._openid}}" data-name="{{item.username}}" data-avatar="{{item.avatar}}" bindtap="followUser">
+          <text>+关注</text>
+        </view>
+        <view class="delete-btn" wx:if="{{item._openid === myOpenid}}" data-id="{{item._id}}" bindtap="deletePost">
+          <text>删除</text>
+        </view>
+      </view>
+
+      <!-- Body -->
+      <view class="post-body">
+        <text class="theme" wx:if="{{item.theme}}">{{item.theme}}</text>
+        <text class="content">{{item.content}}</text>
+        <video
+          wx:if="{{item.type === 'video' && item.videoUrl}}"
+          class="post-video"
+          src="{{item.videoUrl}}"
+          controls
+        />
+      </view>
+
+      <!-- Interaction Bar -->
+      <view class="post-bar">
+        <view class="bar-item" data-id="{{item._id}}" bindtap="toggleLike">
+          <text class="icon">{{item.isLiked ? '❤️' : '🤍'}}</text>
+          <text class="count">{{item.likes || 0}}</text>
+        </view>
+        <view class="bar-item" data-id="{{item._id}}" bindtap="toggleComments">
+          <text class="icon">💬</text>
+          <text class="count">{{item.commentCount}}</text>
+        </view>
+        <view class="bar-item" data-id="{{item._id}}" bindtap="toggleCollect">
+          <text class="icon">{{item.isCollected ? '⭐' : '☆'}}</text>
+          <text class="label">{{item.isCollected ? '已收藏' : '收藏'}}</text>
+        </view>
+      </view>
+
+      <!-- Comments Section -->
+      <view class="comments-section" wx:if="{{item.comments && item.comments.length > 0}}">
+        <view
+          class="comment"
+          wx:for="{{expandedComments[item._id] ? item.comments : item.comments.slice(item.comments.length > 5 ? item.comments.length - 3 : 0)}}"
+          wx:key="createdAt"
+          wx:for-item="c"
+        >
+          <text class="comment-user">{{c.nickname}}</text>
+          <text>: {{c.text}}</text>
+        </view>
+        <view class="expand-row" wx:if="{{item.commentCount > 5}}" data-id="{{item._id}}" bindtap="toggleComments">
+          <text class="expand-text">{{expandedComments[item._id] ? '收起' : '展开全部 ' + item.commentCount + ' 条评论'}}</text>
+        </view>
+      </view>
+
+      <!-- Comment Input -->
+      <view class="comment-input-row">
+        <input
+          class="comment-input"
+          placeholder="写下你的评论..."
+          value="{{commentTexts[item._id] || ''}}"
+          data-id="{{item._id}}"
+          bindinput="onCommentInput"
+          confirm-type="send"
+          bindconfirm="submitComment"
+        />
+        <text class="send-btn" data-id="{{item._id}}" bindtap="submitComment">发送</text>
+      </view>
+    </view>
+
+    <!-- Empty State -->
+    <view class="empty" wx:if="{{posts.length === 0}}">
+      <text class="empty-icon">📝</text>
+      <text class="empty-text">暂无内容</text>
+      <text class="empty-hint">点击右下角 + 发布第一条作品</text>
+    </view>
+
+    <!-- Bottom safe area -->
+    <view class="list-footer" />
+  </scroll-view>
+
+  <!-- FAB -->
+  <view class="fab" bindtap="showPublishForm">
+    <text class="fab-icon">+</text>
+  </view>
+
+  <!-- Publish Modal -->
+  <view class="publish-mask" wx:if="{{showPublish}}" bindtap="hidePublishForm" />
+  <view class="publish-panel {{showPublish ? 'show' : ''}}">
+    <view class="publish-header">
+      <text class="cancel" bindtap="hidePublishForm">取消</text>
+      <text class="title">发布作品</text>
+      <text class="confirm" bindtap="submitPost">发布</text>
+    </view>
+    <view class="publish-body">
+      <input
+        class="theme-input"
+        placeholder="输入标题（选填）"
+        value="{{publishTheme}}"
+        bindinput="onThemeInput"
+        maxlength="50"
+      />
+      <textarea
+        class="content-input"
+        placeholder="分享你的编程心得、学习经验..."
+        value="{{publishContent}}"
+        bindinput="onContentInput"
+        auto-height
+        maxlength="2000"
+      />
+    </view>
+  </view>
+</view>

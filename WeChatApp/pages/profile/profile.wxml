@@ -1,0 +1,76 @@
+<view class="container">
+  <!-- ========== 顶部蓝色区域 ========== -->
+  <view class="header-bg">
+    <view class="user-row">
+      <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+        <image src="{{userInfo.avatar || '/images/avatar-default.png'}}" class="avatar"></image>
+      </button>
+      <view class="user-main">
+        <view class="name-row" bindtap="goToEditProfile">
+          <text class="nickname">{{userInfo.nickname || '微信用户'}}</text>
+          <text class="edit-icon">✎</text>
+        </view>
+        <view class="level-row">
+          <text class="level-text">Lv.{{userInfo.level || 1}} {{levelName}}</text>
+        </view>
+        <view class="points-summary">
+          <text class="points-label">学习积分 - {{userInfo.points || 0}}</text>
+          <text class="points-detail-link" bindtap="goToRecords">查看积分详情</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 数据统计卡片 ========== -->
+  <view class="stats-row">
+    <view class="stat-card">
+      <text class="stat-num">{{userInfo.points || 0}}</text>
+      <text class="stat-label">我的积分</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-card">
+      <text class="stat-num">{{stats.learningTime || 0}}分钟</text>
+      <text class="stat-label">学习时长</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-card">
+      <text class="stat-num">{{stats.completedCourses || 0}}门</text>
+      <text class="stat-label">学习课程</text>
+    </view>
+  </view>
+
+  <!-- ========== 菜单列表 ========== -->
+  <view class="menu-group">
+    <view class="menu-item" bindtap="goToRecords">
+      <text class="menu-icon">🏆</text>
+      <text class="menu-text">学习成就与记录</text>
+      <text class="arrow">></text>
+    </view>
+
+    <view class="menu-item" bindtap="goToEditProfile">
+      <text class="menu-icon">👤</text>
+      <text class="menu-text">个人信息设置</text>
+      <text class="arrow">></text>
+    </view>
+
+    <view class="menu-section">
+      <view class="menu-item menu-item-main" bindtap="goToHelp">
+        <text class="menu-icon">💬</text>
+        <text class="menu-text">帮助中心</text>
+        <text class="arrow">></text>
+      </view>
+      <view class="menu-sub-item" bindtap="goToFAQ">
+        <text class="sub-text">常见问题与帮助</text>
+      </view>
+      <view class="menu-sub-item" bindtap="goToShare">
+        <text class="sub-text">分享友课好友</text>
+      </view>
+    </view>
+
+    <view class="menu-item" bindtap="goToAbout">
+      <text class="menu-icon">ℹ️</text>
+      <text class="menu-text">关于</text>
+      <text class="arrow">></text>
+    </view>
+  </view>
+</view>

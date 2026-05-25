@@ -1,0 +1,85 @@
+/* pages/booking/booking.wxss */
+.container { padding: 20rpx; background-color: #f8f8f8; min-height: 100vh; }
+
+/* 时间段选择器样式 */
+.time-slot-selector {
+  display: flex;
+  background: #fff;
+  border-radius: 12rpx;
+  padding: 10rpx;
+  margin-bottom: 20rpx;
+}
+
+.slot-item {
+  flex: 1;
+  text-align: center;
+  padding: 15rpx 0;
+  font-size: 26rpx;
+  color: #666;
+  border-radius: 8rpx;
+}
+
+.slot-item.active {
+  background-color: #e6f2ff;
+  color: #007aff;
+  font-weight: bold;
+}
+
+/* 卡片样式优化 */
+.card {
+  background: #fff;
+  padding: 20rpx;
+  border-radius: 12rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.05);
+}
+
+.disabled-card {
+  opacity: 0.7;
+  background-color: #fafafa;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10rpx;
+}
+
+.course-name { font-weight: bold; font-size: 32rpx; }
+
+.status { font-size: 24rpx; padding: 4rpx 10rpx; border-radius: 4rpx; }
+.status.available { color: #007aff; background: #e6f2ff; }
+.status.booked { color: #999; background: #f0f0f0; }
+.status.full { color: #ff4d4f; background: #fff1f0; }
+
+.card-body { margin-bottom: 15rpx; }
+.info-row { display: block; font-size: 26rpx; color: #666; margin-bottom: 5rpx; }
+
+/* 老师选择器样式 */
+.teacher-selector { margin-top: 10rpx; }
+.teacher-selector .label { font-size: 24rpx; color: #999; margin-right: 10rpx; }
+.teacher-tags { display: flex; flex-wrap: wrap; gap: 10rpx; margin-top: 5rpx; }
+
+.tag {
+  font-size: 24rpx;
+  padding: 6rpx 16rpx;
+  border: 1rpx solid #ddd;
+  border-radius: 20rpx;
+  color: #666;
+}
+
+.tag-active {
+  border-color: #007aff;
+  color: #007aff;
+  background-color: #e6f2ff;
+}
+
+/* 按钮样式 */
+.btn-action { margin-top: 15rpx; width: 100%; }
+.btn-book { background-color: #007aff; color: #fff; }
+.btn-cancel { background-color: #fff; color: #999; border: 1rpx solid #ddd; }
+.btn-disabled { 
+  background-color: #f5f5f5; 
+  color: #ccc; 
+  border: 1rpx solid #eee; 
+}

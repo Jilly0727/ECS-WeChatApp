@@ -1,0 +1,67 @@
+<!-- pages/booking/booking.wxml -->
+<view class="container">
+  <!-- 1. 时间段选择器 -->
+  <view class="time-slot-selector">
+    <block wx:for="{{timeSlots}}" wx:key="id">
+      <view 
+        class="slot-item {{currentSlotId === item.id ? 'active' : ''}}" 
+        bindtap="onTimeSlotChange" 
+        data-id="{{item.id}}"
+      >
+        {{item.name}}
+      </view>
+    </block>
+  </view>
+  
+  <view class="course-list">
+    <block wx:for="{{filteredCourses}}" wx:key="id">
+      <view class="card {{!item.available ? 'disabled-card' : ''}}">
+        <view class="card-header">
+          <text class="course-name">{{item.name}}</text>
+          <!-- 状态标签 -->
+          <text class="status {{item.booked ? 'booked' : (item.available ? 'available' : 'full')}}">
+            {{item.booked ? '已预约' : (item.available ? '可预约' : '已满员')}}
+          </text>
+        </view>
+        
+        <view class="card-body">
+          <text class="info-row">时间：{{item.time}}</text>
+          
+          <!-- 2. 老师选择器 (仅当可预约且未预约时显示) -->
+          <view class="teacher-selector" wx:if="{{item.available && !item.booked}}">
+            <text class="label">选择老师：</text>
+            <view class="teacher-tags">
+              <block wx:for="{{item.teachers}}" wx:for-item="teacher" wx:key="*this">
+                <view 
+                  class="tag {{item.selectedTeacher === teacher ? 'tag-active' : ''}}"
+                  bindtap="onTeacherChange"
+                  data-id="{{item.id}}"
+                  data-teacher="{{teacher}}"
+                >
+                  {{teacher}}
+                </view>
+              </block>
+            </view>
+          </view>
+          
+          <text wx:else class="info-row">预约老师：{{item.selectedTeacher}}</text>
+        </view>
+
+        <!-- 3. 预约按钮 -->
+        <button 
+          class="btn-action {{item.booked ? 'btn-cancel' : (item.available ? 'btn-book' : 'btn-disabled')}}" 
+          size="mini" 
+          bindtap="toggleBooking" 
+          data-id="{{item.id}}"
+          disabled="{{!item.available}}"
+        >
+          {{item.booked ? '取消预约' : (item.available ? '立即预约' : '不可预约')}}
+        </button>
+      </view>
+    </block>
+    
+    <view wx:if="{{filteredCourses.length === 0}}" class="empty-tip">
+      <text>该时间段暂无课程</text>
+    </view>
+  </view>
+</view>

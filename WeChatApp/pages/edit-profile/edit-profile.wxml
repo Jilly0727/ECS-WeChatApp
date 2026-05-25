@@ -1,0 +1,30 @@
+<view class="container">
+  <view class="section avatar-section">
+    <view class="section-title">头像</view>
+    <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+      <image
+        src="{{isAvatarChanged ? newAvatarPath : (avatar || '/images/avatar-default.png')}}"
+        class="avatar-preview"
+        mode="aspectFill"
+      />
+      <view class="change-tip">点击更换头像</view>
+    </button>
+  </view>
+
+  <view class="section">
+    <view class="section-title">昵称</view>
+    <view class="field">
+      <input
+        class="input"
+        type="nickname"
+        value="{{nickname}}"
+        placeholder="请输入昵称"
+        bindinput="onNicknameInput"
+      />
+    </view>
+  </view>
+
+  <view class="footer">
+    <button class="btn-save" bindtap="saveProfile" disabled="{{saving}}">保存</button>
+  </view>
+</view>

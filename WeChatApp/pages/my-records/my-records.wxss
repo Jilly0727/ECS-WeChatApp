@@ -1,0 +1,107 @@
+/* pages/my-records/my-records.wxss */
+.container {
+  padding: 20rpx;
+  background-color: #f8f8f8;
+  min-height: 100vh;
+}
+
+.header {
+  margin-bottom: 20rpx;
+}
+
+.title {
+  font-size: 36rpx;
+  font-weight: bold;
+  display: block;
+}
+
+.subtitle {
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 5rpx;
+  display: block;
+}
+
+.card {
+  background: #fff;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.05);
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15rpx;
+  border-bottom: 1rpx solid #eee;
+  padding-bottom: 10rpx;
+}
+
+.course-name {
+  font-size: 32rpx;
+  font-weight: bold;
+}
+
+.status {
+  font-size: 24rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 4rpx;
+}
+
+.status.active {
+  color: #007aff;
+  background: #e6f2ff;
+}
+
+.status.cancelled {
+  color: #999;
+  background: #f0f0f0;
+}
+
+.status.completed {
+  color: #07c160;
+  background: #e6f9ee;
+}
+
+.card-info {
+  margin-bottom: 15rpx;
+}
+
+.info-item {
+  font-size: 26rpx;
+  color: #666;
+  margin-bottom: 5rpx;
+}
+
+.label {
+  color: #999;
+}
+
+.points-badge {
+  margin-bottom: 15rpx;
+}
+
+.points-text {
+  font-size: 26rpx;
+  color: #07c160;
+  font-weight: bold;
+}
+
+.card-footer {
+  display: flex;
+  gap: 15rpx;
+}
+
+.btn-checkin {
+  background-color: #007aff;
+  color: #fff;
+  border: none;
+}
+
+.btn-cancel {
+  background-color: #fff;
+  color: #ff4d4f;
+  border: 1rpx solid #ff4d4f;
+}

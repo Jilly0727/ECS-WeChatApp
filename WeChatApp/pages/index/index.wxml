@@ -1,0 +1,35 @@
+<view class="container">
+  <!-- 顶部欢迎语 -->
+  <view class="header">
+    <text class="title">你好，学习者</text>
+    <text class="subtitle">今天想学习点什么？</text>
+  </view>
+
+  <!-- 功能快捷入口 -->
+  <view class="quick-actions">
+    <view class="action-card create-btn" bindtap="goToCommunity">
+      <text class="icon">✍️</text>
+      <text class="label">发布作品</text>
+    </view>
+    <view class="action-card record-btn" bindtap="goToRecords">
+      <text class="icon">📊</text>
+      <text class="label">学习记录</text>
+    </view>
+  </view>
+
+  <!-- 推荐课程列表 -->
+  <view class="section">
+    <text class="section-title">热门课程</text>
+    <view class="course-list">
+      <block wx:for="{{recommendCourses}}" wx:key="id">
+        <view class="course-item" bindtap="goToBooking">
+          <image src="{{item.image}}" class="course-img" mode="aspectFill"></image>
+          <view class="course-info">
+            <text class="course-name">{{item.name}}</text>
+            <text class="course-teacher">{{item.teacher}}</text>
+          </view>
+        </view>
+      </block>
+    </view>
+  </view>
+</view>

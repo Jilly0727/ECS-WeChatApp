@@ -17,16 +17,21 @@ const WECHAT_APPID = process.env.WECHAT_APPID;
 const WECHAT_SECRET = process.env.WECHAT_SECRET;
 
 // ── MySQL ──
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '3306'),
+const dbConfig = {
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'youke',
   waitForConnections: true,
   connectionLimit: 10,
   charset: 'utf8mb4'
-});
+};
+if (process.env.DB_SOCKET) {
+  dbConfig.socketPath = process.env.DB_SOCKET;
+} else {
+  dbConfig.host = process.env.DB_HOST || 'localhost';
+  dbConfig.port = parseInt(process.env.DB_PORT || '3306');
+}
+const pool = mysql.createPool(dbConfig);
 
 // ── Middleware ──
 app.use(cors());

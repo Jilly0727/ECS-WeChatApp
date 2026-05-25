@@ -1,0 +1,74 @@
+<!-- pages/course-detail/course-detail.wxml -->
+<view class="page" wx:if="{{course}}">
+  <!-- Hero Image -->
+  <image class="hero-img" src="{{course.image}}" mode="aspectFill" bindtap="previewImage" />
+
+  <!-- Course Header -->
+  <view class="card">
+    <text class="course-name">{{course.name}}</text>
+    <view class="tags">
+      <text class="tag price-tag">{{course.price}}</text>
+      <text class="tag {{course.available ? 'open-tag' : 'full-tag'}}">
+        {{course.available ? '可预约' : '已满员'}}
+      </text>
+    </view>
+
+    <!-- Meta Info -->
+    <view class="meta-grid">
+      <view class="meta-item">
+        <text class="meta-label">讲师</text>
+        <text class="meta-value">{{course.teacher}}</text>
+      </view>
+      <view class="meta-item">
+        <text class="meta-label">时间</text>
+        <text class="meta-value">{{course.time}}</text>
+      </view>
+      <view class="meta-item">
+        <text class="meta-label">时长</text>
+        <text class="meta-value">{{course.duration}}</text>
+      </view>
+      <view class="meta-item">
+        <text class="meta-label">地点</text>
+        <text class="meta-value">{{course.location}}</text>
+      </view>
+      <view class="meta-item">
+        <text class="meta-label">名额</text>
+        <text class="meta-value">{{course.enrolled}}/{{course.maxStudents}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Description -->
+  <view class="card">
+    <text class="section-title">课程介绍</text>
+    <text class="desc-text">{{course.description}}</text>
+  </view>
+
+  <!-- Syllabus -->
+  <view class="card">
+    <text class="section-title">课程大纲</text>
+    <view class="syllabus-list">
+      <view class="syllabus-item" wx:for="{{course.syllabus}}" wx:key="index">
+        <text class="syllabus-num">{{index + 1}}</text>
+        <text class="syllabus-text">{{item}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Bottom safe area -->
+  <view class="bottom-spacer" />
+</view>
+
+<!-- Booking Bar (fixed bottom) -->
+<view class="booking-bar" wx:if="{{course}}">
+  <view class="booking-info">
+    <text class="booking-status">{{isBooked ? '已预约' : (course.available ? '可预约' : '已满员')}}</text>
+    <text class="booking-hint" wx:if="{{!isBooked && course.available}}">点击右侧按钮预约</text>
+  </view>
+  <view
+    class="booking-btn {{isBooked ? 'cancel-btn' : (course.available ? '' : 'disabled-btn')}}"
+    bindtap="toggleBooking"
+  >
+    <text>{{isBooked ? '取消预约' : (course.available ? '立即预约' : '已满员')}}</text>
+  </view>
+</view>

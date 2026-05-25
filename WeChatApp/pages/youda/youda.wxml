@@ -35,6 +35,18 @@
       <view class="post-body">
         <text class="theme" wx:if="{{item.theme}}">{{item.theme}}</text>
         <text class="content">{{item.content}}</text>
+        <view class="post-images" wx:if="{{item.images && item.images.length > 0}}">
+          <image
+            wx:for="{{item.images}}"
+            wx:key="index"
+            class="post-image"
+            src="{{item}}"
+            mode="aspectFill"
+            data-urls="{{item.images}}"
+            data-current="{{item}}"
+            bindtap="previewImage"
+          />
+        </view>
         <video
           wx:if="{{item.type === 'video' && item.videoUrl}}"
           class="post-video"
@@ -130,6 +142,16 @@
         auto-height
         maxlength="2000"
       />
+      <view class="publish-images-section">
+        <view class="publish-image-item" wx:for="{{publishImages}}" wx:key="index">
+          <image class="publish-image" src="{{item}}" mode="aspectFill" />
+          <view class="remove-image-btn" data-index="{{index}}" bindtap="removeImage">✕</view>
+        </view>
+        <view class="publish-image-add" wx:if="{{publishImages.length < 9}}" bindtap="chooseImages">
+          <text class="add-icon">+</text>
+          <text class="add-text">添加图片</text>
+        </view>
+      </view>
     </view>
   </view>
 </view>

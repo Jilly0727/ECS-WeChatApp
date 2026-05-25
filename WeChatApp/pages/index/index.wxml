@@ -22,7 +22,7 @@
     <text class="section-title">热门课程</text>
     <view class="course-list">
       <block wx:for="{{recommendCourses}}" wx:key="id">
-        <view class="course-item" bindtap="goToBooking">
+        <view class="course-item" bindtap="goToBooking" data-id="{{item.id}}">
           <image src="{{item.image}}" class="course-img" mode="aspectFill"></image>
           <view class="course-info">
             <text class="course-name">{{item.name}}</text>

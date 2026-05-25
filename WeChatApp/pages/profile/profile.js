@@ -98,7 +98,14 @@ Page({
   },
 
   goToShare() {
-    wx.showToast({ title: '分享功能开发中', icon: 'none' });
+    wx.showToast({ title: '点击右上角菜单分享', icon: 'none' });
+  },
+
+  onShareAppMessage() {
+    return {
+      title: '友课 - 学习交友，共同进步',
+      path: '/pages/index/index'
+    };
   },
 
   goToAbout() {

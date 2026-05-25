@@ -5,7 +5,8 @@
     "pages/youda/youda",
     "pages/profile/profile",
     "pages/edit-profile/edit-profile",
-    "pages/my-records/my-records"
+    "pages/my-records/my-records",
+    "pages/course-detail/course-detail"
   ],
   "window": {
     "backgroundTextStyle": "light",

@@ -1,0 +1,194 @@
+/* pages/course-detail/course-detail.wxss */
+
+.page {
+  background: #f5f6fa;
+  min-height: 100vh;
+}
+
+/* Hero */
+.hero-img {
+  width: 100%;
+  height: 400rpx;
+  background: #e8e8e8;
+}
+
+/* Card */
+.card {
+  background: #fff;
+  margin: 20rpx 24rpx;
+  border-radius: 16rpx;
+  padding: 28rpx;
+}
+
+.course-name {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #1a1a1a;
+  display: block;
+  margin-bottom: 16rpx;
+}
+
+.tags {
+  display: flex;
+  gap: 12rpx;
+  margin-bottom: 24rpx;
+}
+
+.tag {
+  font-size: 22rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 6rpx;
+}
+
+.price-tag {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.open-tag {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.full-tag {
+  background: #ffebee;
+  color: #c62828;
+}
+
+/* Meta Grid */
+.meta-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24rpx;
+}
+
+.meta-item {
+  width: calc(50% - 12rpx);
+  display: flex;
+  flex-direction: column;
+}
+
+.meta-label {
+  font-size: 24rpx;
+  color: #999;
+  margin-bottom: 6rpx;
+}
+
+.meta-value {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+/* Sections */
+.section-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 16rpx;
+  display: block;
+}
+
+.desc-text {
+  font-size: 28rpx;
+  color: #555;
+  line-height: 1.8;
+  display: block;
+}
+
+/* Syllabus */
+.syllabus-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.syllabus-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+}
+
+.syllabus-num {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: #e3f2fd;
+  color: #1565c0;
+  font-size: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2rpx;
+}
+
+.syllabus-text {
+  font-size: 28rpx;
+  color: #444;
+  line-height: 1.6;
+  flex: 1;
+}
+
+/* Bottom spacer */
+.bottom-spacer {
+  height: 140rpx;
+}
+
+/* Booking Bar */
+.booking-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  padding: 20rpx 32rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1rpx solid #eee;
+  box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.06);
+  z-index: 100;
+}
+
+.booking-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.booking-status {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.booking-hint {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 4rpx;
+}
+
+.booking-btn {
+  padding: 18rpx 48rpx;
+  border-radius: 40rpx;
+  background: #007aff;
+}
+
+.booking-btn text {
+  font-size: 28rpx;
+  color: #fff;
+  font-weight: 500;
+}
+
+.booking-btn.cancel-btn {
+  background: #fff;
+  border: 2rpx solid #ff4d4f;
+}
+
+.booking-btn.cancel-btn text {
+  color: #ff4d4f;
+}
+
+.booking-btn.disabled-btn {
+  background: #ccc;
+}

@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS posts (
   theme VARCHAR(100) DEFAULT '',
   content TEXT NOT NULL,
   video_url VARCHAR(500) DEFAULT '',
+  images TEXT,
   avatar VARCHAR(500) DEFAULT '',
   username VARCHAR(50) DEFAULT '微信用户',
   likes INT DEFAULT 0,
@@ -102,5 +103,35 @@ CREATE TABLE IF NOT EXISTS points_log (
   points INT DEFAULT 0,
   description VARCHAR(200) DEFAULT '',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_openid (openid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 课程表
+CREATE TABLE IF NOT EXISTS courses (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  slot_id VARCHAR(20) DEFAULT '',
+  teacher VARCHAR(50) DEFAULT '',
+  teachers JSON,
+  time VARCHAR(50) DEFAULT '',
+  duration VARCHAR(20) DEFAULT '',
+  max_students INT DEFAULT 30,
+  enrolled INT DEFAULT 0,
+  image VARCHAR(255) DEFAULT '',
+  available TINYINT(1) DEFAULT 1,
+  description TEXT,
+  syllabus JSON,
+  location VARCHAR(100) DEFAULT '线上直播',
+  price VARCHAR(20) DEFAULT '免费',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 消息订阅表
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  openid VARCHAR(64) NOT NULL,
+  template_type VARCHAR(30) NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_sub (openid, template_type),
   INDEX idx_openid (openid)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

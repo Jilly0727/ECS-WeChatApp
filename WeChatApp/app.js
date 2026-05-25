@@ -10,6 +10,7 @@ App({
   },
 
   onLaunch() {
+    wx.showShareMenu({ withShareTicket: false, menus: ['shareAppMessage'] });
     this.login();
   },
 

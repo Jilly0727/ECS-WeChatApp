@@ -1,7 +1,7 @@
 // config/env.js
 
 // 环境配置：只需修改这一个变量即可切换环境
-const ENV = 'local'; // 'local' 或 'ecs'
+const ENV = 'ecs'; // 'local' 或 'ecs'
 
 const environments = {
   local: {

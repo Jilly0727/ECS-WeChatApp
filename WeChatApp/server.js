@@ -18,6 +18,44 @@ const TOKEN_EXPIRES = '7d';
 const WECHAT_APPID = process.env.WECHAT_APPID;
 const WECHAT_SECRET = process.env.WECHAT_SECRET;
 
+// WeChat access_token 缓存
+let accessTokenCache = { token: null, expiresAt: 0 };
+
+async function getAccessToken() {
+  if (accessTokenCache.token && Date.now() < accessTokenCache.expiresAt) {
+    return accessTokenCache.token;
+  }
+  const res = await axios.get('https://api.weixin.qq.com/cgi-bin/token', {
+    params: { grant_type: 'client_credential', appid: WECHAT_APPID, secret: WECHAT_SECRET }
+  });
+  if (res.data.access_token) {
+    accessTokenCache = {
+      token: res.data.access_token,
+      expiresAt: Date.now() + (res.data.expires_in - 300) * 1000
+    };
+    return accessTokenCache.token;
+  }
+  throw new Error('获取access_token失败: ' + JSON.stringify(res.data));
+}
+
+async function contentCheck(text, openid) {
+  try {
+    const token = await getAccessToken();
+    const res = await axios.post(
+      `https://api.weixin.qq.com/wxa/msg_sec_check?access_token=${token}`,
+      { content: text, openid: openid, scene: 2, version: 2 }
+    );
+    const result = res.data;
+    if (result.errcode === 0 && result.result && result.result.suggest === 'pass') {
+      return { ok: true };
+    }
+    return { ok: false, label: result.result ? result.result.label : '违规' };
+  } catch (err) {
+    console.error('内容审核调用失败:', err.message);
+    return { ok: true };
+  }
+}
+
 // ── MySQL ──
 const dbConfig = {
   user: process.env.DB_USER || 'root',
@@ -41,16 +79,25 @@ app.use(bodyParser.json());
 
 const publicDir = path.join(__dirname, 'public');
 const avatarsDir = path.join(publicDir, 'avatars');
-[publicDir, avatarsDir].forEach(d => { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); });
+const imagesDir = path.join(publicDir, 'images');
+[publicDir, avatarsDir, imagesDir].forEach(d => { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); });
 app.use(express.static(publicDir));
 
-const storage = multer.diskStorage({
+const avatarStorage = multer.diskStorage({
   destination: avatarsDir,
   filename: (req, file, cb) => {
     cb(null, `${req.openid}_${Date.now()}.png`);
   }
 });
-const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
+const upload = multer({ storage: avatarStorage, limits: { fileSize: 5 * 1024 * 1024 } });
+
+const imageStorage = multer.diskStorage({
+  destination: imagesDir,
+  filename: (req, file, cb) => {
+    cb(null, `${req.openid}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`);
+  }
+});
+const imageUpload = multer({ storage: imageStorage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 // JWT 验证中间件
 function auth(req, res, next) {
@@ -197,6 +244,15 @@ app.post('/api/upload/avatar', auth, upload.single('file'), async (req, res) => 
   res.json({ success: true, data: { url } });
 });
 
+// ── 图片上传 ──
+app.post('/api/upload/image', auth, imageUpload.array('files', 9), async (req, res) => {
+  if (!req.files || req.files.length === 0) {
+    return res.status(400).json({ success: false, message: '请选择图片' });
+  }
+  const urls = req.files.map(f => `${hostUrl(req)}/images/${f.filename}`);
+  res.json({ success: true, data: { urls } });
+});
+
 // ── 帖子列表 ──
 app.get('/api/posts', optionalAuth, async (req, res) => {
   const { tab } = req.query;
@@ -272,6 +328,7 @@ app.get('/api/posts', optionalAuth, async (req, res) => {
       type: p.type,
       theme: p.theme,
       content: p.content,
+      images: p.images ? JSON.parse(p.images) : [],
       videoUrl: p.video_url,
       avatar: p.avatar,
       username: p.username,
@@ -293,20 +350,28 @@ app.get('/api/posts', optionalAuth, async (req, res) => {
 
 // ── 发布帖子 ──
 app.post('/api/posts', auth, async (req, res) => {
-  const { type, theme, content, videoUrl } = req.body;
+  const { type, theme, content, videoUrl, images } = req.body;
   if (!content || !content.trim()) {
     return res.status(400).json({ success: false, message: '内容不能为空' });
   }
+
+  // 内容审核
+  const checkResult = await contentCheck(content.trim(), req.openid);
+  if (!checkResult.ok) {
+    return res.status(400).json({ success: false, message: `内容包含违规信息（${checkResult.label}），请修改后重试` });
+  }
+
   try {
-    // 获取用户信息
     const [users] = await pool.query('SELECT nickname, avatar FROM users WHERE openid = ?', [req.openid]);
     const nickname = users.length > 0 ? users[0].nickname : '微信用户';
     const avatar = users.length > 0 ? users[0].avatar : '/images/avatar-default.png';
 
+    const imagesJson = images && Array.isArray(images) ? JSON.stringify(images) : '';
+
     const [result] = await pool.query(
-      `INSERT INTO posts (openid, type, theme, content, video_url, avatar, username, likes, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 0, NOW())`,
-      [req.openid, type || 'text', (theme || '').trim(), content.trim(), videoUrl || '', avatar, nickname]
+      `INSERT INTO posts (openid, type, theme, content, video_url, images, avatar, username, likes, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())`,
+      [req.openid, type || 'text', (theme || '').trim(), content.trim(), videoUrl || '', imagesJson, avatar, nickname]
     );
 
     const [rows] = await pool.query('SELECT * FROM posts WHERE id = ?', [result.insertId]);
@@ -320,6 +385,7 @@ app.post('/api/posts', auth, async (req, res) => {
         type: p.type,
         theme: p.theme,
         content: p.content,
+        images: p.images ? JSON.parse(p.images) : [],
         videoUrl: p.video_url,
         avatar: p.avatar,
         username: p.username,
@@ -414,6 +480,12 @@ app.post('/api/posts/:id/comments', auth, async (req, res) => {
   if (!text || !text.trim()) {
     return res.status(400).json({ success: false, message: '评论不能为空' });
   }
+
+  const checkResult = await contentCheck(text.trim(), req.openid);
+  if (!checkResult.ok) {
+    return res.status(400).json({ success: false, message: `评论包含违规信息（${checkResult.label}），请修改后重试` });
+  }
+
   try {
     const [users] = await pool.query('SELECT nickname, avatar FROM users WHERE openid = ?', [req.openid]);
     const nickname = users.length > 0 ? users[0].nickname : '微信用户';
@@ -638,6 +710,213 @@ app.get('/api/bookings/status', auth, async (req, res) => {
   } catch (err) {
     console.error('获取预约状态失败:', err);
     res.status(500).json({ success: false, message: '获取失败' });
+  }
+});
+
+function formatCourseTime(timeStr) {
+  if (!timeStr) return '';
+  const d = new Date(timeStr);
+  if (isNaN(d.getTime())) return timeStr;
+  const month = d.getMonth() + 1;
+  const day = d.getDate();
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+  const weekday = weekdays[d.getDay()];
+  return `${month}月${day}日 ${weekday} ${hours}:${minutes}`;
+}
+
+function dbCourseToObj(c) {
+  let teachers = [];
+  if (Array.isArray(c.teachers)) {
+    teachers = c.teachers;
+  } else if (typeof c.teachers === 'string') {
+    try { teachers = JSON.parse(c.teachers); } catch (_) { teachers = [c.teacher]; }
+  } else {
+    teachers = [c.teacher];
+  }
+  let syllabus = [];
+  if (Array.isArray(c.syllabus)) {
+    syllabus = c.syllabus;
+  } else if (typeof c.syllabus === 'string') {
+    try { syllabus = JSON.parse(c.syllabus); } catch (_) { syllabus = []; }
+  }
+  return {
+    id: c.id, name: c.name, slotId: c.slot_id,
+    teacher: c.teacher, teachers,
+    time: c.time, duration: c.duration,
+    maxStudents: c.max_students, enrolled: c.enrolled,
+    image: c.image, available: c.available === 1,
+    description: c.description, syllabus,
+    location: c.location, price: c.price
+  };
+}
+
+async function loadCoursesFromDB() {
+  const [rows] = await pool.query('SELECT * FROM courses ORDER BY time ASC');
+  return rows.map(dbCourseToObj);
+}
+
+// ── 课程表 ──
+app.get('/api/courses/schedule', auth, async (req, res) => {
+  try {
+    const now = new Date();
+    const twoWeeksLater = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+
+    const [courseRows, bookingRows] = await Promise.all([
+      pool.query('SELECT * FROM courses ORDER BY time ASC'),
+      pool.query('SELECT * FROM bookings WHERE openid = ? ORDER BY created_at DESC', [req.openid])
+    ]);
+
+    const courses = courseRows[0].map(dbCourseToObj);
+    const bookings = bookingRows[0];
+
+    const bookedSet = new Set();
+    const learnedSet = new Set();
+    bookings.forEach(b => {
+      if (b.status === 'booked') bookedSet.add(b.course_id);
+      if (b.status === 'checked_in') learnedSet.add(b.course_id);
+    });
+
+    // 近期课表：未来2周内的课程，按时间升序
+    const upcomingCourses = courses
+      .filter(c => {
+        const t = new Date(c.time);
+        return !isNaN(t) && t >= now && t <= twoWeeksLater && !learnedSet.has(c.id);
+      })
+      .map(c => ({
+        id: c.id, name: c.name, teacher: c.teacher,
+        time: c.time, displayTime: formatCourseTime(c.time),
+        duration: c.duration, image: c.image,
+        location: c.location, price: c.price,
+        maxStudents: c.maxStudents, enrolled: c.enrolled,
+        available: c.available && c.enrolled < c.maxStudents,
+        isBooked: bookedSet.has(c.id)
+      }));
+
+    // 已预约课程，按时间升序
+    const bookedCourses = bookings
+      .filter(b => b.status === 'booked')
+      .map(b => {
+        const course = courses.find(c => c.id === b.course_id);
+        const time = b.time || (course ? course.time : '');
+        return {
+          bookingId: b.id, courseId: b.course_id,
+          courseName: b.course_name || (course ? course.name : ''),
+          teacher: b.teacher || (course ? course.teacher : ''),
+          time, displayTime: formatCourseTime(time),
+          image: course ? course.image : '',
+          location: course ? course.location : '',
+          duration: course ? course.duration : '',
+          price: course ? course.price : ''
+        };
+      })
+      .sort((a, b) => new Date(a.time) - new Date(b.time));
+
+    // 已学过课程（已签到），按时间倒序
+    const learnedCourses = bookings
+      .filter(b => b.status === 'checked_in')
+      .map(b => {
+        const course = courses.find(c => c.id === b.course_id);
+        const time = b.time || (course ? course.time : '');
+        return {
+          bookingId: b.id, courseId: b.course_id,
+          courseName: b.course_name || (course ? course.name : ''),
+          teacher: b.teacher || (course ? course.teacher : ''),
+          time, displayTime: formatCourseTime(time),
+          pointsEarned: b.points_earned || 0,
+          image: course ? course.image : '',
+          location: course ? course.location : '',
+          duration: course ? course.duration : ''
+        };
+      })
+      .sort((a, b) => new Date(b.time) - new Date(a.time));
+
+    res.json({
+      success: true,
+      data: { upcoming: upcomingCourses, booked: bookedCourses, learned: learnedCourses }
+    });
+  } catch (err) {
+    console.error('获取课程表失败:', err);
+    res.status(500).json({ success: false, message: '获取失败' });
+  }
+});
+
+// ── 课程列表 ──
+app.get('/api/courses', async (req, res) => {
+  try {
+    const courses = await loadCoursesFromDB();
+    res.json({
+      success: true,
+      data: courses.map(c => ({
+        id: c.id, name: c.name, slotId: c.slotId,
+        teacher: c.teacher, time: c.time, duration: c.duration,
+        maxStudents: c.maxStudents, enrolled: c.enrolled,
+        image: c.image, available: c.available && c.enrolled < c.maxStudents,
+        location: c.location, price: c.price
+      }))
+    });
+  } catch (err) {
+    console.error('获取课程列表失败:', err);
+    res.status(500).json({ success: false, message: '获取失败' });
+  }
+});
+
+// ── 课程详情 ──
+app.get('/api/courses/:id', auth, async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM courses WHERE id = ?', [parseInt(req.params.id)]);
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: '课程不存在' });
+    }
+    const course = dbCourseToObj(rows[0]);
+    const [bookingRows] = await pool.query(
+      'SELECT id FROM bookings WHERE openid = ? AND course_id = ? AND status = ?',
+      [req.openid, course.id, 'booked']
+    );
+    res.json({
+      success: true,
+      data: {
+        ...course,
+        available: course.available && course.enrolled < course.maxStudents,
+        isBooked: bookingRows.length > 0
+      }
+    });
+  } catch (err) {
+    console.error('获取课程详情失败:', err);
+    res.status(500).json({ success: false, message: '获取失败' });
+  }
+});
+
+// ── 消息订阅 ──
+app.post('/api/subscribe', auth, async (req, res) => {
+  const { templateType } = req.body;
+  if (!templateType) {
+    return res.status(400).json({ success: false, message: '缺少模板类型' });
+  }
+  try {
+    await pool.query(
+      `INSERT INTO subscriptions (openid, template_type, created_at)
+       VALUES (?, ?, NOW())
+       ON DUPLICATE KEY UPDATE created_at = NOW()`,
+      [req.openid, templateType]
+    );
+    res.json({ success: true, message: '订阅成功' });
+  } catch (err) {
+    console.error('订阅失败:', err);
+    res.status(500).json({ success: false, message: '订阅失败' });
+  }
+});
+
+app.get('/api/subscriptions', auth, async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      'SELECT template_type FROM subscriptions WHERE openid = ?',
+      [req.openid]
+    );
+    res.json({ success: true, data: rows.map(r => r.template_type) });
+  } catch (err) {
+    res.json({ success: true, data: [] });
   }
 });
 

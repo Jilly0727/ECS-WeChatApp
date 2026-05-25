@@ -13,6 +13,7 @@ Page({
     showPublish: false,
     publishTheme: '',
     publishContent: '',
+    publishImages: [],
     followingOpenids: []
   },
 
@@ -92,7 +93,8 @@ Page({
     this.setData({
       showPublish: true,
       publishTheme: '',
-      publishContent: ''
+      publishContent: '',
+      publishImages: []
     });
   },
 
@@ -108,30 +110,115 @@ Page({
     this.setData({ publishContent: e.detail.value });
   },
 
+  chooseImages() {
+    const remain = 9 - (this.data.publishImages || []).length;
+    if (remain <= 0) {
+      wx.showToast({ title: '最多选择9张图片', icon: 'none' });
+      return;
+    }
+    wx.chooseImage({
+      count: remain,
+      sizeType: ['compressed'],
+      sourceType: ['album', 'camera'],
+      success: (res) => {
+        const newImages = [...this.data.publishImages, ...res.tempFilePaths];
+        this.setData({ publishImages: newImages });
+      }
+    });
+  },
+
+  removeImage(e) {
+    const index = e.currentTarget.dataset.index;
+    const images = this.data.publishImages.filter((_, i) => i !== index);
+    this.setData({ publishImages: images });
+  },
+
   submitPost() {
-    const { publishTheme, publishContent } = this.data;
+    const { publishTheme, publishContent, publishImages } = this.data;
     if (!publishContent.trim()) {
       wx.showToast({ title: '内容不能为空', icon: 'none' });
       return;
     }
 
     wx.showLoading({ title: '发布中...' });
-    request({
-      url: '/api/posts',
-      method: 'POST',
-      data: {
-        type: 'text',
-        theme: publishTheme,
-        content: publishContent
-      }
-    }).then(() => {
-      wx.hideLoading();
-      wx.showToast({ title: '发布成功', icon: 'success' });
-      this.hidePublishForm();
-      this.loadPosts();
-    }).catch(() => {
-      wx.hideLoading();
-    });
+
+    const doPost = (imageUrls) => {
+      request({
+        url: '/api/posts',
+        method: 'POST',
+        data: {
+          type: publishImages.length > 0 ? 'image' : 'text',
+          theme: publishTheme,
+          content: publishContent,
+          images: imageUrls || []
+        }
+      }).then(() => {
+        wx.hideLoading();
+        wx.showToast({ title: '发布成功', icon: 'success' });
+        this.hidePublishForm();
+        this.loadPosts();
+      }).catch(() => {
+        wx.hideLoading();
+      });
+    };
+
+    if (publishImages.length === 0) {
+      return doPost([]);
+    }
+
+    // Upload images first
+    const token = app.globalData.token;
+    const BASE_URL = require('../../config/env').BASE_URL;
+    let uploaded = 0;
+    const urls = [];
+
+    const uploadNext = (i) => {
+      wx.uploadFile({
+        url: `${BASE_URL}/api/upload/image`,
+        filePath: publishImages[i],
+        name: 'files',
+        header: { 'Authorization': `Bearer ${token}` },
+        success: (res) => {
+          try {
+            const data = JSON.parse(res.data);
+            if (data.success && data.data && data.data.urls) {
+              urls.push(...data.data.urls);
+            }
+          } catch (_) {}
+          uploaded++;
+          if (uploaded < publishImages.length) {
+            uploadNext(uploaded);
+          } else {
+            wx.hideLoading();
+            if (urls.length > 0) {
+              doPost(urls);
+            } else {
+              wx.showToast({ title: '图片上传失败', icon: 'none' });
+            }
+          }
+        },
+        fail: () => {
+          uploaded++;
+          if (uploaded < publishImages.length) {
+            uploadNext(uploaded);
+          } else {
+            wx.hideLoading();
+            if (urls.length > 0) {
+              doPost(urls);
+            } else {
+              wx.showToast({ title: '图片上传失败', icon: 'none' });
+            }
+          }
+        }
+      });
+    };
+
+    uploadNext(0);
+  },
+
+  previewImage(e) {
+    const { urls, current } = e.currentTarget.dataset;
+    wx.previewImage({ urls, current });
   },
 
   // ── Like / Collect ──
@@ -234,6 +321,20 @@ Page({
   },
 
   // ── Follow ──
+
+  onShareAppMessage(e) {
+    if (e.from === 'button' && e.target) {
+      const id = e.target.dataset.id;
+      const post = this.data.posts.find(p => p._id === id);
+      if (post) {
+        return {
+          title: post.theme || post.content.slice(0, 30),
+          path: `/pages/youda/youda`
+        };
+      }
+    }
+    return { title: '友答 - 编程学习社区', path: '/pages/youda/youda' };
+  },
 
   followUser(e) {
     const { openid, name, avatar } = e.currentTarget.dataset;

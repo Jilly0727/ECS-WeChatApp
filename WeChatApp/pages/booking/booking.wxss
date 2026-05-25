@@ -1,85 +1,128 @@
 /* pages/booking/booking.wxss */
-.container { padding: 20rpx; background-color: #f8f8f8; min-height: 100vh; }
+page { background-color: #f5f5f5; }
 
-/* 时间段选择器样式 */
-.time-slot-selector {
+.container { padding: 24rpx; min-height: 100vh; }
+
+/* Tab 切换栏 */
+.tab-bar {
   display: flex;
   background: #fff;
   border-radius: 12rpx;
-  padding: 10rpx;
-  margin-bottom: 20rpx;
+  padding: 8rpx;
+  margin-bottom: 24rpx;
 }
 
-.slot-item {
+.tab-item {
   flex: 1;
   text-align: center;
-  padding: 15rpx 0;
+  padding: 16rpx 0;
   font-size: 26rpx;
   color: #666;
   border-radius: 8rpx;
+  transition: all 0.2s;
 }
 
-.slot-item.active {
-  background-color: #e6f2ff;
-  color: #007aff;
-  font-weight: bold;
+.tab-item.tab-active {
+  background-color: #007aff;
+  color: #fff;
+  font-weight: 600;
 }
 
-/* 卡片样式优化 */
+/* Loading */
+.loading-wrap { display: flex; justify-content: center; padding-top: 200rpx; }
+.loading-text { font-size: 28rpx; color: #999; }
+
+/* Card */
 .card {
   background: #fff;
-  padding: 20rpx;
-  border-radius: 12rpx;
-  margin-bottom: 20rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.05);
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
 }
 
-.disabled-card {
-  opacity: 0.7;
-  background-color: #fafafa;
-}
+.disabled-card { opacity: 0.6; }
+.learned-card { background: #fafbfc; }
 
 .card-header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 10rpx;
+  align-items: center;
+  margin-bottom: 16rpx;
 }
 
-.course-name { font-weight: bold; font-size: 32rpx; }
+.course-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1a1a1a;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
-.status { font-size: 24rpx; padding: 4rpx 10rpx; border-radius: 4rpx; }
-.status.available { color: #007aff; background: #e6f2ff; }
-.status.booked { color: #999; background: #f0f0f0; }
-.status.full { color: #ff4d4f; background: #fff1f0; }
+.status-tag {
+  font-size: 22rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 6rpx;
+  flex-shrink: 0;
+  margin-left: 16rpx;
+}
 
-.card-body { margin-bottom: 15rpx; }
-.info-row { display: block; font-size: 26rpx; color: #666; margin-bottom: 5rpx; }
+.tag-open { color: #007aff; background: #e8f4fd; }
+.tag-booked { color: #ff9500; background: #fff7e6; }
+.tag-full { color: #ff4d4f; background: #fff1f0; }
+.tag-done { color: #34c759; background: #e8f8ed; }
 
-/* 老师选择器样式 */
-.teacher-selector { margin-top: 10rpx; }
-.teacher-selector .label { font-size: 24rpx; color: #999; margin-right: 10rpx; }
-.teacher-tags { display: flex; flex-wrap: wrap; gap: 10rpx; margin-top: 5rpx; }
+.card-body { margin-bottom: 16rpx; }
 
-.tag {
-  font-size: 24rpx;
-  padding: 6rpx 16rpx;
-  border: 1rpx solid #ddd;
-  border-radius: 20rpx;
+.info-row {
+  display: block;
+  font-size: 26rpx;
   color: #666;
+  line-height: 40rpx;
 }
 
-.tag-active {
-  border-color: #007aff;
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.detail-link {
+  font-size: 24rpx;
   color: #007aff;
-  background-color: #e6f2ff;
 }
 
-/* 按钮样式 */
-.btn-action { margin-top: 15rpx; width: 100%; }
-.btn-book { background-color: #007aff; color: #fff; }
-.btn-cancel { background-color: #fff; color: #999; border: 1rpx solid #ddd; }
-.btn-disabled { 
-  background-color: #f5f5f5; 
-  color: #ccc; 
-  border: 1rpx solid #eee; 
+/* Buttons */
+.btn-action {
+  margin: 0 !important;
+  font-size: 24rpx;
+  padding: 0 24rpx;
+  height: 56rpx;
+  line-height: 56rpx;
+  border-radius: 28rpx;
+  border: none;
 }
+
+.btn-book { background-color: #007aff; color: #fff; }
+.btn-booked { background-color: #f5f5f5; color: #999; }
+
+.btn-cancel {
+  background-color: #fff;
+  color: #ff4d4f;
+  border: 1rpx solid #ff4d4f;
+}
+
+/* Empty */
+.empty-tip {
+  text-align: center;
+  padding: 120rpx 0;
+  font-size: 26rpx;
+  color: #bbb;
+}
+
+/* Bottom spacer */
+.bottom-spacer { height: 40rpx; }

@@ -1,67 +1,105 @@
 <!-- pages/booking/booking.wxml -->
 <view class="container">
-  <!-- 1. 时间段选择器 -->
-  <view class="time-slot-selector">
-    <block wx:for="{{timeSlots}}" wx:key="id">
-      <view 
-        class="slot-item {{currentSlotId === item.id ? 'active' : ''}}" 
-        bindtap="onTimeSlotChange" 
-        data-id="{{item.id}}"
-      >
-        {{item.name}}
-      </view>
-    </block>
-  </view>
-  
-  <view class="course-list">
-    <block wx:for="{{filteredCourses}}" wx:key="id">
-      <view class="card {{!item.available ? 'disabled-card' : ''}}">
-        <view class="card-header">
-          <text class="course-name">{{item.name}}</text>
-          <!-- 状态标签 -->
-          <text class="status {{item.booked ? 'booked' : (item.available ? 'available' : 'full')}}">
-            {{item.booked ? '已预约' : (item.available ? '可预约' : '已满员')}}
-          </text>
-        </view>
-        
-        <view class="card-body">
-          <text class="info-row">时间：{{item.time}}</text>
-          
-          <!-- 2. 老师选择器 (仅当可预约且未预约时显示) -->
-          <view class="teacher-selector" wx:if="{{item.available && !item.booked}}">
-            <text class="label">选择老师：</text>
-            <view class="teacher-tags">
-              <block wx:for="{{item.teachers}}" wx:for-item="teacher" wx:key="*this">
-                <view 
-                  class="tag {{item.selectedTeacher === teacher ? 'tag-active' : ''}}"
-                  bindtap="onTeacherChange"
-                  data-id="{{item.id}}"
-                  data-teacher="{{teacher}}"
-                >
-                  {{teacher}}
-                </view>
-              </block>
-            </view>
-          </view>
-          
-          <text wx:else class="info-row">预约老师：{{item.selectedTeacher}}</text>
-        </view>
-
-        <!-- 3. 预约按钮 -->
-        <button 
-          class="btn-action {{item.booked ? 'btn-cancel' : (item.available ? 'btn-book' : 'btn-disabled')}}" 
-          size="mini" 
-          bindtap="toggleBooking" 
-          data-id="{{item.id}}"
-          disabled="{{!item.available}}"
-        >
-          {{item.booked ? '取消预约' : (item.available ? '立即预约' : '不可预约')}}
-        </button>
-      </view>
-    </block>
-    
-    <view wx:if="{{filteredCourses.length === 0}}" class="empty-tip">
-      <text>该时间段暂无课程</text>
+  <!-- Tab 切换栏 -->
+  <view class="tab-bar">
+    <view
+      wx:for="{{tabs}}"
+      wx:key="key"
+      class="tab-item {{currentTab === item.key ? 'tab-active' : ''}}"
+      bindtap="onTabChange"
+      data-key="{{item.key}}"
+    >
+      {{item.label}}
     </view>
   </view>
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="loading-wrap">
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <block wx:else>
+    <!-- 近期课表 -->
+    <view wx:if="{{currentTab === 'upcoming'}}" class="course-list">
+      <block wx:for="{{upcomingCourses}}" wx:key="id">
+        <view class="card {{!item.available && !item.isBooked ? 'disabled-card' : ''}}">
+          <view class="card-header">
+            <text class="course-name">{{item.name}}</text>
+            <text class="status-tag {{item.isBooked ? 'tag-booked' : (item.available ? 'tag-open' : 'tag-full')}}">
+              {{item.isBooked ? '已预约' : (item.available ? '可预约' : '已满员')}}
+            </text>
+          </view>
+          <view class="card-body">
+            <text class="info-row">时间：{{item.displayTime || item.time}}</text>
+            <text class="info-row">主讲人：{{item.teacher}}</text>
+          </view>
+          <view class="card-footer">
+            <text class="detail-link" bindtap="goToDetail" data-id="{{item.id}}">查看课程详情 ></text>
+            <button
+              wx:if="{{!item.isBooked}}"
+              class="btn-action btn-book"
+              size="mini"
+              bindtap="bookCourse"
+              data-id="{{item.id}}"
+              disabled="{{!item.available}}"
+            >
+              {{item.available ? '立即预约' : '已满员'}}
+            </button>
+            <button wx:else class="btn-action btn-booked" size="mini" disabled>已预约</button>
+          </view>
+        </view>
+      </block>
+      <view wx:if="{{upcomingCourses.length === 0}}" class="empty-tip">
+        <text>近期暂无课程</text>
+      </view>
+    </view>
+
+    <!-- 已预约课程 -->
+    <view wx:if="{{currentTab === 'booked'}}" class="course-list">
+      <block wx:for="{{bookedCourses}}" wx:key="bookingId">
+        <view class="card">
+          <view class="card-header">
+            <text class="course-name">{{item.courseName}}</text>
+            <text class="status-tag tag-booked">已预约</text>
+          </view>
+          <view class="card-body">
+            <text class="info-row">时间：{{item.displayTime || item.time}}</text>
+            <text class="info-row">主讲人：{{item.teacher}}</text>
+          </view>
+          <view class="card-footer">
+            <text class="detail-link" bindtap="goToDetail" data-id="{{item.courseId}}">查看课程详情 ></text>
+            <button class="btn-action btn-cancel" size="mini" bindtap="cancelBooking" data-booking-id="{{item.bookingId}}">取消预约</button>
+          </view>
+        </view>
+      </block>
+      <view wx:if="{{bookedCourses.length === 0}}" class="empty-tip">
+        <text>暂无已预约课程</text>
+      </view>
+    </view>
+
+    <!-- 已学过课程 -->
+    <view wx:if="{{currentTab === 'learned'}}" class="course-list">
+      <block wx:for="{{learnedCourses}}" wx:key="bookingId">
+        <view class="card learned-card">
+          <view class="card-header">
+            <text class="course-name">{{item.courseName}}</text>
+            <text class="status-tag tag-done">已签到</text>
+          </view>
+          <view class="card-body">
+            <text class="info-row">时间：{{item.displayTime || item.time}}</text>
+            <text class="info-row">主讲人：{{item.teacher}}</text>
+            <text class="info-row" wx:if="{{item.pointsEarned}}">获得积分：+{{item.pointsEarned}}</text>
+          </view>
+          <view class="card-footer">
+            <text class="detail-link" bindtap="goToDetail" data-id="{{item.courseId}}">查看课程详情 ></text>
+          </view>
+        </view>
+      </block>
+      <view wx:if="{{learnedCourses.length === 0}}" class="empty-tip">
+        <text>暂无已学课程</text>
+      </view>
+    </view>
+  </block>
+
+  <view class="bottom-spacer"></view>
 </view>

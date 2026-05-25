@@ -128,6 +128,20 @@
   word-break: break-all;
 }
 
+.post-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-top: 16rpx;
+}
+
+.post-image {
+  width: 210rpx;
+  height: 210rpx;
+  border-radius: 8rpx;
+  flex-shrink: 0;
+}
+
 .post-video {
   width: 100%;
   margin-top: 16rpx;
@@ -349,4 +363,64 @@
   font-size: 28rpx;
   padding: 16rpx 0;
   line-height: 1.6;
+}
+
+/* Publish Images */
+
+.publish-images-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  padding: 16rpx 0;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.publish-image-item {
+  position: relative;
+  width: 150rpx;
+  height: 150rpx;
+}
+
+.publish-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 8rpx;
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: -10rpx;
+  right: -10rpx;
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.publish-image-add {
+  width: 150rpx;
+  height: 150rpx;
+  border: 2rpx dashed #ccc;
+  border-radius: 8rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-icon {
+  font-size: 48rpx;
+  color: #999;
+  line-height: 1;
+}
+
+.add-text {
+  font-size: 20rpx;
+  color: #999;
+  margin-top: 6rpx;
 }

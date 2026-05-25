@@ -97,3 +97,153 @@
   font-size: 24rpx;
   color: #999;
 }
+
+.course-collect {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-left: 16rpx;
+}
+
+.collect-icon {
+  font-size: 32rpx;
+}
+
+.collect-count {
+  font-size: 20rpx;
+  color: #999;
+  margin-top: 4rpx;
+}
+
+/* ── Publish Modal ── */
+
+.publish-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 100;
+}
+
+.publish-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  z-index: 101;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+}
+
+.publish-panel.show {
+  transform: translateY(0);
+}
+
+.publish-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 32rpx;
+  border-bottom: 1rpx solid #eee;
+}
+
+.publish-header .cancel {
+  font-size: 28rpx;
+  color: #999;
+}
+
+.publish-header .publish-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.publish-header .confirm {
+  font-size: 28rpx;
+  color: #007aff;
+  font-weight: 600;
+}
+
+.publish-body {
+  padding: 24rpx 32rpx;
+}
+
+.theme-input {
+  width: 100%;
+  font-size: 30rpx;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+  margin-bottom: 16rpx;
+}
+
+.content-input {
+  width: 100%;
+  min-height: 200rpx;
+  font-size: 28rpx;
+  padding: 16rpx 0;
+  line-height: 1.6;
+}
+
+/* Publish Images */
+
+.publish-images-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  padding: 16rpx 0;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.publish-image-item {
+  position: relative;
+  width: 150rpx;
+  height: 150rpx;
+}
+
+.publish-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 8rpx;
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: -10rpx;
+  right: -10rpx;
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.publish-image-add {
+  width: 150rpx;
+  height: 150rpx;
+  border: 2rpx dashed #ccc;
+  border-radius: 8rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-icon {
+  font-size: 48rpx;
+  color: #999;
+  line-height: 1;
+}
+
+.add-text {
+  font-size: 20rpx;
+  color: #999;
+  margin-top: 6rpx;
+}

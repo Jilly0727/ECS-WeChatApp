@@ -1,0 +1,96 @@
+<view class="page">
+  <!-- 用户信息头部 -->
+  <view class="profile-header">
+    <image class="profile-avatar" src="{{user.avatar}}" mode="aspectFill" />
+    <text class="profile-nickname">{{user.nickname}}</text>
+    <view class="level-tag">
+      <text>Lv.{{user.level}} {{levelName}}</text>
+    </view>
+    <text class="points-text">{{user.points}} 积分</text>
+
+    <!-- 统计数据 -->
+    <view class="stats-row">
+      <view class="stat-item">
+        <text class="stat-num">{{user.postCount}}</text>
+        <text class="stat-label">作品</text>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-item">
+        <text class="stat-num">{{user.followerCount}}</text>
+        <text class="stat-label">粉丝</text>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-item">
+        <text class="stat-num">{{user.followingCount}}</text>
+        <text class="stat-label">关注</text>
+      </view>
+    </view>
+
+    <!-- 关注按钮 -->
+    <view class="follow-action" wx:if="{{user.openid !== myOpenid}}" bindtap="toggleFollow">
+      <view class="follow-action-btn {{user.isFollowed ? 'following' : ''}}">
+        <text>{{user.isFollowed ? '已关注' : '+ 关注'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 作品列表 -->
+  <view class="section-title">
+    <text>近期作品</text>
+  </view>
+
+  <scroll-view scroll-y class="post-list" enhanced show-scrollbar="{{false}}">
+    <view class="post-card" wx:for="{{posts}}" wx:key="_id">
+      <!-- Header -->
+      <view class="post-header">
+        <image class="avatar" src="{{item.avatar}}" mode="aspectFill" />
+        <view class="post-user">
+          <text class="username">{{item.username}}</text>
+          <text class="time">{{item.displayTime}}</text>
+        </view>
+      </view>
+
+      <!-- Body -->
+      <view class="post-body">
+        <text class="theme" wx:if="{{item.theme}}">{{item.theme}}</text>
+        <text class="content">{{item.content}}</text>
+        <view class="post-images" wx:if="{{item.images && item.images.length > 0}}">
+          <image
+            wx:for="{{item.images}}"
+            wx:key="index"
+            class="post-image"
+            src="{{item}}"
+            mode="aspectFill"
+            data-urls="{{item.images}}"
+            data-current="{{item}}"
+            bindtap="previewImage"
+          />
+        </view>
+      </view>
+
+      <!-- Interaction Bar -->
+      <view class="post-bar">
+        <view class="bar-item" data-id="{{item._id}}" bindtap="toggleLike">
+          <text class="icon">{{item.isLiked ? '❤️' : '🤍'}}</text>
+          <text class="count">{{item.likes || 0}}</text>
+        </view>
+        <view class="bar-item">
+          <text class="icon">💬</text>
+          <text class="count">{{item.commentCount}}</text>
+        </view>
+        <view class="bar-item" data-id="{{item._id}}" bindtap="toggleCollect">
+          <text class="icon">{{item.isCollected ? '⭐' : '☆'}}</text>
+          <text class="label">{{item.isCollected ? '已收藏' : '收藏'}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Empty State -->
+    <view class="empty" wx:if="{{posts.length === 0 && !loading}}">
+      <text class="empty-icon">📝</text>
+      <text class="empty-text">暂无作品</text>
+    </view>
+
+    <view class="list-footer" />
+  </scroll-view>
+</view>

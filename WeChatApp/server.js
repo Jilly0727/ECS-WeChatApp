@@ -235,6 +235,138 @@ app.put('/api/users/me', auth, async (req, res) => {
   }
 });
 
+// ── 查看其他用户资料 ──
+app.get('/api/users/:openid', optionalAuth, async (req, res) => {
+  const targetOpenid = req.params.openid;
+  const myOpenid = req.openid || '';
+  try {
+    const [users] = await pool.query('SELECT * FROM users WHERE openid = ?', [targetOpenid]);
+    if (users.length === 0) {
+      return res.status(404).json({ success: false, message: '用户不存在' });
+    }
+    const u = users[0];
+
+    // 粉丝数
+    const [followerRows] = await pool.query(
+      'SELECT COUNT(*) as count FROM follows WHERE following_openid = ?',
+      [targetOpenid]
+    );
+    // 关注数
+    const [followingRows] = await pool.query(
+      'SELECT COUNT(*) as count FROM follows WHERE openid = ?',
+      [targetOpenid]
+    );
+    // 作品数
+    const [postRows] = await pool.query(
+      'SELECT COUNT(*) as count FROM posts WHERE openid = ?',
+      [targetOpenid]
+    );
+    // 当前用户是否已关注
+    let isFollowed = false;
+    if (myOpenid && myOpenid !== targetOpenid) {
+      const [followRows] = await pool.query(
+        'SELECT id FROM follows WHERE openid = ? AND following_openid = ?',
+        [myOpenid, targetOpenid]
+      );
+      isFollowed = followRows.length > 0;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        openid: u.openid,
+        nickname: u.nickname,
+        avatar: u.avatar,
+        points: u.points || 0,
+        totalCheckins: u.total_checkins || 0,
+        level: Math.floor((u.points || 0) / 100) + 1,
+        followerCount: followerRows[0].count,
+        followingCount: followingRows[0].count,
+        postCount: postRows[0].count,
+        isFollowed
+      }
+    });
+  } catch (err) {
+    console.error('获取用户资料失败:', err);
+    res.status(500).json({ success: false, message: '获取失败' });
+  }
+});
+
+// ── 获取用户帖子列表 ──
+app.get('/api/users/:openid/posts', optionalAuth, async (req, res) => {
+  const targetOpenid = req.params.openid;
+  const myOpenid = req.openid || '';
+  try {
+    const [postRows] = await pool.query(
+      'SELECT * FROM posts WHERE openid = ? ORDER BY created_at DESC LIMIT 20',
+      [targetOpenid]
+    );
+    const postIds = postRows.map(p => p.id);
+
+    // 批量取评论
+    let commentsMap = {};
+    if (postIds.length > 0) {
+      const placeholders = postIds.map(() => '?').join(',');
+      const [commentRows] = await pool.query(
+        `SELECT * FROM comments WHERE post_id IN (${placeholders}) ORDER BY created_at ASC`,
+        postIds
+      );
+      commentRows.forEach(c => {
+        if (!commentsMap[c.post_id]) commentsMap[c.post_id] = [];
+        commentsMap[c.post_id].push({
+          openid: c.openid,
+          nickname: c.nickname,
+          avatar: c.avatar,
+          text: c.text,
+          createdAt: c.created_at
+        });
+      });
+    }
+
+    // 批量取当前用户的点赞/收藏状态
+    let likeSet = new Set();
+    let collectSet = new Set();
+    if (myOpenid && postIds.length > 0) {
+      const ph = postIds.map(() => '?').join(',');
+      const [likes] = await pool.query(
+        `SELECT post_id FROM post_likes WHERE openid = ? AND post_id IN (${ph})`,
+        [myOpenid, ...postIds]
+      );
+      likes.forEach(l => likeSet.add(l.post_id));
+      const [collects] = await pool.query(
+        `SELECT post_id FROM post_collects WHERE openid = ? AND post_id IN (${ph})`,
+        [myOpenid, ...postIds]
+      );
+      collects.forEach(c => collectSet.add(c.post_id));
+    }
+
+    const posts = postRows.map(p => ({
+      id: p.id,
+      _id: String(p.id),
+      _openid: p.openid,
+      type: p.type,
+      theme: p.theme,
+      content: p.content,
+      images: p.images ? JSON.parse(p.images) : [],
+      videoUrl: p.video_url,
+      avatar: p.avatar,
+      username: p.username,
+      likes: p.likes || 0,
+      isLiked: likeSet.has(p.id),
+      isCollected: collectSet.has(p.id),
+      commentCount: (commentsMap[p.id] || []).length,
+      comments: commentsMap[p.id] || [],
+      createdAt: p.created_at,
+      displayTime: formatTime(p.created_at)
+    }));
+
+    res.json({ success: true, data: posts });
+  } catch (err) {
+    console.error('获取用户帖子失败:', err);
+    res.status(500).json({ success: false, message: '获取失败' });
+  }
+});
+
 // ── 头像上传 ──
 app.post('/api/upload/avatar', auth, upload.single('file'), async (req, res) => {
   if (!req.file) {
@@ -260,23 +392,25 @@ app.get('/api/posts', optionalAuth, async (req, res) => {
   try {
     let sql, params = [];
     if (tab === 'mine' && myOpenid) {
+      // 我的作品：按发布时间降序
       sql = 'SELECT * FROM posts WHERE openid = ? ORDER BY created_at DESC';
       params = [myOpenid];
     } else if (tab === 'following' && myOpenid) {
+      // 我的关注：关注用户的作品，按发布时间降序
       const [followRows] = await pool.query('SELECT following_openid FROM follows WHERE openid = ?', [myOpenid]);
       const followingIds = followRows.map(r => r.following_openid);
       if (followingIds.length > 0) {
-        sql = `SELECT DISTINCT p.* FROM posts p
-               LEFT JOIN post_collects pc ON pc.post_id = p.id AND pc.openid = ?
-               WHERE p.openid IN (${followingIds.map(() => '?').join(',')}) OR pc.openid IS NOT NULL
-               ORDER BY p.created_at DESC`;
-        params = [myOpenid, ...followingIds];
+        sql = `SELECT * FROM posts WHERE openid IN (${followingIds.map(() => '?').join(',')}) ORDER BY created_at DESC`;
+        params = [...followingIds];
       } else {
-        sql = `SELECT p.* FROM posts p
-               INNER JOIN post_collects pc ON pc.post_id = p.id AND pc.openid = ?
-               ORDER BY p.created_at DESC`;
-        params = [myOpenid];
+        sql = 'SELECT * FROM posts WHERE 1=0';
       }
+    } else if (tab === 'collected' && myOpenid) {
+      // 我的收藏：收藏的帖子，按发布时间降序 + 点赞量降序
+      sql = `SELECT p.* FROM posts p
+             INNER JOIN post_collects pc ON pc.post_id = p.id AND pc.openid = ?
+             ORDER BY p.created_at DESC, p.likes DESC`;
+      params = [myOpenid];
     } else {
       sql = 'SELECT * FROM posts ORDER BY created_at DESC';
     }
@@ -726,50 +860,96 @@ function formatCourseTime(timeStr) {
   return `${month}月${day}日 ${weekday} ${hours}:${minutes}`;
 }
 
-function dbCourseToObj(c) {
-  let teachers = [];
-  if (Array.isArray(c.teachers)) {
-    teachers = c.teachers;
-  } else if (typeof c.teachers === 'string') {
-    try { teachers = JSON.parse(c.teachers); } catch (_) { teachers = [c.teacher]; }
-  } else {
-    teachers = [c.teacher];
-  }
-  let syllabus = [];
-  if (Array.isArray(c.syllabus)) {
-    syllabus = c.syllabus;
-  } else if (typeof c.syllabus === 'string') {
-    try { syllabus = JSON.parse(c.syllabus); } catch (_) { syllabus = []; }
-  }
-  return {
-    id: c.id, name: c.name, slotId: c.slot_id,
-    teacher: c.teacher, teachers,
-    time: c.time, duration: c.duration,
-    maxStudents: c.max_students, enrolled: c.enrolled,
-    image: c.image, available: c.available === 1,
-    description: c.description, syllabus,
-    location: c.location, price: c.price
+// ── 生成动态内置课程（日期 = 今天 + 偏移量，始终落在14天窗口内） ──
+function buildBuiltinCourses() {
+  const now = new Date();
+  // 对齐到最近的整点，确保时间显示一致
+  const makeDate = (daysFromNow, hour, minute) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + daysFromNow);
+    d.setHours(hour, minute, 0, 0);
+    const month = d.getMonth() + 1;
+    const day = d.getDate();
+    const h = String(d.getHours()).padStart(2, '0');
+    const m = String(d.getMinutes()).padStart(2, '0');
+    return `${d.getFullYear()}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ${h}:${m}:00`;
   };
+  return [
+    { id: 1, name: '前端性能优化', slotId: 'morning', time: makeDate(3, 10, 0) },
+    { id: 2, name: 'React 源码解读', slotId: 'afternoon', time: makeDate(5, 14, 0) },
+    { id: 3, name: 'Node.js 进阶', slotId: 'evening', time: makeDate(7, 19, 0) },
+    { id: 4, name: 'Vue3 实战', slotId: 'morning', time: makeDate(10, 10, 0) }
+  ];
 }
+const builtinDates = buildBuiltinCourses();
+const builtinCourses = [
+  {
+    id: 1, name: '前端性能优化', slotId: 'morning',
+    teacher: '森森老师', teachers: ['森森老师', '杰老师'],
+    time: builtinDates[0].time, duration: '120分钟', maxStudents: 30, enrolled: 12,
+    image: '/images/js.png', available: true,
+    description: '深入理解浏览器渲染原理，掌握前端性能优化的核心方法论。从网络层到渲染层，全面剖析性能瓶颈并给出实战解决方案。',
+    syllabus: ['浏览器渲染流程与关键渲染路径','资源加载优化（懒加载、预加载、HTTP/2）','JavaScript 执行性能优化','CSS 动画与重排重绘优化','Web Vitals 指标监控与实战'],
+    location: '线上直播', price: '免费'
+  },
+  {
+    id: 2, name: 'React 源码解读', slotId: 'afternoon',
+    teacher: '杰老师', teachers: ['杰老师', 'Alex'],
+    time: builtinDates[1].time, duration: '150分钟', maxStudents: 25, enrolled: 18,
+    image: '/images/vue.png', available: true,
+    description: '深入 React 源码，理解 Fiber 架构、Hooks 实现原理、调度机制等核心概念。从源码层面理解 React 设计思想。',
+    syllabus: ['React 架构演进（Stack → Fiber）','Fiber 节点与工作循环','Hooks 实现原理解析','React 调度器（Scheduler）详解','Diff 算法与 Commit 阶段'],
+    location: '线上直播', price: '免费'
+  },
+  {
+    id: 3, name: 'Node.js 进阶', slotId: 'evening',
+    teacher: '森森老师', teachers: ['森森老师'],
+    time: builtinDates[2].time, duration: '120分钟', maxStudents: 30, enrolled: 30,
+    image: '/images/wx.png', available: false,
+    description: '从事件循环到集群部署，系统学习 Node.js 高级特性。适合有基础的后端开发者进阶学习。',
+    syllabus: ['Event Loop 与异步编程模型','Stream 与 Buffer 深入应用','进程管理与 Cluster 集群','性能调优与内存泄漏排查','企业级项目架构实践'],
+    location: '线上直播', price: '免费'
+  },
+  {
+    id: 4, name: 'Vue3 实战', slotId: 'morning',
+    teacher: '杰老师', teachers: ['杰老师', '森森老师'],
+    time: builtinDates[3].time, duration: '180分钟', maxStudents: 25, enrolled: 8,
+    image: '/images/js.png', available: true,
+    description: 'Vue3 Composition API 实战课程，从项目搭建到组件设计模式，涵盖响应式系统、组合函数、状态管理等核心主题。',
+    syllabus: ['Vue3 响应式系统（ref / reactive）','Composition API 设计模式','组合函数与逻辑复用','Pinia 状态管理实战','Vue3 + TypeScript 最佳实践'],
+    location: '线上直播', price: '免费'
+  }
+];
 
-async function loadCoursesFromDB() {
-  const [rows] = await pool.query('SELECT * FROM courses ORDER BY time ASC');
-  return rows.map(dbCourseToObj);
-}
-
-// ── 课程表 ──
+// ── 课程表（优先DB，失败时降级为内置数据） ──
 app.get('/api/courses/schedule', auth, async (req, res) => {
   try {
     const now = new Date();
     const twoWeeksLater = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
 
-    const [courseRows, bookingRows] = await Promise.all([
-      pool.query('SELECT * FROM courses ORDER BY time ASC'),
-      pool.query('SELECT * FROM bookings WHERE openid = ? ORDER BY created_at DESC', [req.openid])
-    ]);
+    let courses = builtinCourses;
+    let bookings = [];
 
-    const courses = courseRows[0].map(dbCourseToObj);
-    const bookings = bookingRows[0];
+    // 尝试从数据库加载（全部课程用于映射，近期14天课程用于展示）
+    try {
+      const [allRows] = await pool.query('SELECT * FROM courses ORDER BY time ASC');
+      if (allRows.length > 0) {
+        courses = allRows.map(c => ({
+          id: c.id, name: c.name, slotId: c.slot_id,
+          teacher: c.teacher, teachers: Array.isArray(c.teachers) ? c.teachers : (typeof c.teachers === 'string' ? JSON.parse(c.teachers) : [c.teacher]),
+          time: c.time, duration: c.duration, maxStudents: c.max_students, enrolled: c.enrolled,
+          image: c.image, available: c.available === 1,
+          description: c.description,
+          syllabus: Array.isArray(c.syllabus) ? c.syllabus : (typeof c.syllabus === 'string' ? JSON.parse(c.syllabus) : []),
+          location: c.location, price: c.price
+        }));
+      }
+    } catch (_) {}
+
+    try {
+      const [rows] = await pool.query('SELECT * FROM bookings WHERE openid = ? ORDER BY created_at DESC', [req.openid]);
+      bookings = rows;
+    } catch (_) {}
 
     const bookedSet = new Set();
     const learnedSet = new Set();
@@ -778,7 +958,6 @@ app.get('/api/courses/schedule', auth, async (req, res) => {
       if (b.status === 'checked_in') learnedSet.add(b.course_id);
     });
 
-    // 近期课表：未来2周内的课程，按时间升序
     const upcomingCourses = courses
       .filter(c => {
         const t = new Date(c.time);
@@ -794,7 +973,6 @@ app.get('/api/courses/schedule', auth, async (req, res) => {
         isBooked: bookedSet.has(c.id)
       }));
 
-    // 已预约课程，按时间升序
     const bookedCourses = bookings
       .filter(b => b.status === 'booked')
       .map(b => {
@@ -813,7 +991,6 @@ app.get('/api/courses/schedule', auth, async (req, res) => {
       })
       .sort((a, b) => new Date(a.time) - new Date(b.time));
 
-    // 已学过课程（已签到），按时间倒序
     const learnedCourses = bookings
       .filter(b => b.status === 'checked_in')
       .map(b => {
@@ -844,48 +1021,144 @@ app.get('/api/courses/schedule', auth, async (req, res) => {
 
 // ── 课程列表 ──
 app.get('/api/courses', async (req, res) => {
+  let courses = builtinCourses;
   try {
-    const courses = await loadCoursesFromDB();
-    res.json({
-      success: true,
-      data: courses.map(c => ({
-        id: c.id, name: c.name, slotId: c.slotId,
+    const [rows] = await pool.query('SELECT * FROM courses ORDER BY time ASC');
+    if (rows.length > 0) {
+      courses = rows.map(c => ({
+        id: c.id, name: c.name, slotId: c.slot_id,
         teacher: c.teacher, time: c.time, duration: c.duration,
-        maxStudents: c.maxStudents, enrolled: c.enrolled,
-        image: c.image, available: c.available && c.enrolled < c.maxStudents,
+        maxStudents: c.max_students, enrolled: c.enrolled,
+        image: c.image, available: c.available === 1,
+        teachers: Array.isArray(c.teachers) ? c.teachers : (typeof c.teachers === 'string' ? JSON.parse(c.teachers) : [c.teacher]),
         location: c.location, price: c.price
-      }))
-    });
+      }));
+    }
+  } catch (_) {}
+  res.json({
+    success: true,
+    data: courses.map(c => ({
+      id: c.id, name: c.name, slotId: c.slotId,
+      teacher: c.teacher, time: c.time, duration: c.duration,
+      maxStudents: c.maxStudents, enrolled: c.enrolled,
+      image: c.image, available: c.available && c.enrolled < c.maxStudents,
+      location: c.location, price: c.price
+    }))
+  });
+});
+
+// ── 热门课程（按收藏数降序，取前5） ──
+app.get('/api/courses/hot', optionalAuth, async (req, res) => {
+  try {
+    // 尝试从DB获取课程及其收藏数
+    const [rows] = await pool.query(
+      `SELECT c.*, COUNT(cc.id) AS collect_count
+       FROM courses c
+       LEFT JOIN course_collects cc ON cc.course_id = c.id
+       GROUP BY c.id
+       ORDER BY collect_count DESC, c.id ASC
+       LIMIT 5`
+    );
+
+    let courses;
+    if (rows.length > 0) {
+      courses = rows.map(c => ({
+        id: c.id, name: c.name, slotId: c.slot_id,
+        teacher: c.teacher, teachers: Array.isArray(c.teachers) ? c.teachers : (typeof c.teachers === 'string' ? JSON.parse(c.teachers) : [c.teacher]),
+        time: c.time, duration: c.duration, maxStudents: c.max_students, enrolled: c.enrolled,
+        image: c.image, available: c.available === 1 && c.enrolled < c.maxStudents,
+        description: c.description,
+        syllabus: Array.isArray(c.syllabus) ? c.syllabus : (typeof c.syllabus === 'string' ? JSON.parse(c.syllabus) : []),
+        location: c.location, price: c.price,
+        collectCount: c.collect_count
+      }));
+    } else {
+      // 降级为内置课程（按收藏数从 course_collects 统计）
+      courses = builtinCourses.map(c => ({ ...c, collectCount: 0 }));
+      try {
+        for (const c of courses) {
+          const [countRows] = await pool.query(
+            'SELECT COUNT(*) as count FROM course_collects WHERE course_id = ?', [c.id]
+          );
+          c.collectCount = countRows[0].count;
+        }
+      } catch (_) {}
+      courses.sort((a, b) => b.collectCount - a.collectCount);
+      courses = courses.slice(0, 5);
+    }
+
+    res.json({ success: true, data: courses });
   } catch (err) {
-    console.error('获取课程列表失败:', err);
-    res.status(500).json({ success: false, message: '获取失败' });
+    console.error('获取热门课程失败:', err);
+    // 降级返回内置课程前5个
+    res.json({ success: true, data: builtinCourses.slice(0, 5).map(c => ({ ...c, collectCount: 0 })) });
+  }
+});
+
+// ── 课程收藏/取消 ──
+app.post('/api/courses/:id/collect', auth, async (req, res) => {
+  const courseId = parseInt(req.params.id);
+  try {
+    const [exists] = await pool.query(
+      'SELECT id FROM course_collects WHERE course_id = ? AND openid = ?',
+      [courseId, req.openid]
+    );
+    if (exists.length > 0) {
+      await pool.query('DELETE FROM course_collects WHERE course_id = ? AND openid = ?', [courseId, req.openid]);
+      res.json({ success: true, data: { isCollected: false } });
+    } else {
+      await pool.query('INSERT INTO course_collects (course_id, openid) VALUES (?, ?)', [courseId, req.openid]);
+      res.json({ success: true, data: { isCollected: true } });
+    }
+  } catch (err) {
+    console.error('课程收藏操作失败:', err);
+    res.status(500).json({ success: false, message: '操作失败' });
   }
 });
 
 // ── 课程详情 ──
 app.get('/api/courses/:id', auth, async (req, res) => {
+  const courseId = parseInt(req.params.id);
+  let course = builtinCourses.find(c => c.id === courseId);
+
+  // 尝试从DB获取最新数据
   try {
-    const [rows] = await pool.query('SELECT * FROM courses WHERE id = ?', [parseInt(req.params.id)]);
-    if (rows.length === 0) {
-      return res.status(404).json({ success: false, message: '课程不存在' });
+    const [rows] = await pool.query('SELECT * FROM courses WHERE id = ?', [courseId]);
+    if (rows.length > 0) {
+      const c = rows[0];
+      course = {
+        id: c.id, name: c.name, slotId: c.slot_id,
+        teacher: c.teacher, teachers: Array.isArray(c.teachers) ? c.teachers : (typeof c.teachers === 'string' ? JSON.parse(c.teachers) : [c.teacher]),
+        time: c.time, duration: c.duration, maxStudents: c.max_students, enrolled: c.enrolled,
+        image: c.image, available: c.available === 1,
+        description: c.description,
+        syllabus: Array.isArray(c.syllabus) ? c.syllabus : (typeof c.syllabus === 'string' ? JSON.parse(c.syllabus) : []),
+        location: c.location, price: c.price
+      };
     }
-    const course = dbCourseToObj(rows[0]);
+  } catch (_) {}
+
+  if (!course) {
+    return res.status(404).json({ success: false, message: '课程不存在' });
+  }
+
+  let isBooked = false;
+  try {
     const [bookingRows] = await pool.query(
       'SELECT id FROM bookings WHERE openid = ? AND course_id = ? AND status = ?',
       [req.openid, course.id, 'booked']
     );
-    res.json({
-      success: true,
-      data: {
-        ...course,
-        available: course.available && course.enrolled < course.maxStudents,
-        isBooked: bookingRows.length > 0
-      }
-    });
-  } catch (err) {
-    console.error('获取课程详情失败:', err);
-    res.status(500).json({ success: false, message: '获取失败' });
-  }
+    isBooked = bookingRows.length > 0;
+  } catch (_) {}
+
+  res.json({
+    success: true,
+    data: {
+      ...course,
+      available: course.available && course.enrolled < course.maxStudents,
+      isBooked
+    }
+  });
 });
 
 // ── 消息订阅 ──

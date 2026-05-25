@@ -6,7 +6,8 @@
     "pages/profile/profile",
     "pages/edit-profile/edit-profile",
     "pages/my-records/my-records",
-    "pages/course-detail/course-detail"
+    "pages/course-detail/course-detail",
+    "pages/user-profile/user-profile"
   ],
   "window": {
     "backgroundTextStyle": "light",

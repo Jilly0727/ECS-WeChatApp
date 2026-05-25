@@ -89,6 +89,12 @@ Page({
     wx.navigateTo({ url: '/pages/my-records/my-records' });
   },
 
+  goToYouDa(e) {
+    const tab = e.currentTarget.dataset.tab || 0;
+    app.globalData.youdaTab = parseInt(tab);
+    wx.switchTab({ url: '/pages/youda/youda' });
+  },
+
   goToHelp() {
     wx.showToast({ title: '帮助中心开发中', icon: 'none' });
   },

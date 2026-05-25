@@ -5,20 +5,21 @@ const { request } = require('../../utils/request');
 Page({
   data: {
     activeTab: 0,
-    tabs: ['我的作品', '动态', '友藏'],
+    tabs: ['我的关注', '我的作品', '我的收藏'],
     posts: [],
     myOpenid: '',
     expandedComments: {},
     commentTexts: {},
-    showPublish: false,
-    publishTheme: '',
-    publishContent: '',
-    publishImages: [],
     followingOpenids: []
   },
 
   onLoad() {
     const openid = app.globalData.openid || '';
+    // 支持从其他页面跳转到指定tab
+    if (app.globalData.youdaTab !== undefined) {
+      this.setData({ activeTab: app.globalData.youdaTab });
+      delete app.globalData.youdaTab;
+    }
     this.setData({ myOpenid: openid });
     if (openid) {
       this.loadFollowing();
@@ -61,9 +62,11 @@ Page({
 
     let url = '/api/posts';
     if (activeTab === 0) {
+      url = '/api/posts?tab=following';
+    } else if (activeTab === 1) {
       url = '/api/posts?tab=mine';
     } else if (activeTab === 2) {
-      url = '/api/posts?tab=following';
+      url = '/api/posts?tab=collected';
     }
 
     request({
@@ -85,135 +88,6 @@ Page({
     }).catch(err => {
       console.error('加载帖子失败', err);
     });
-  },
-
-  // ── Publish ──
-
-  showPublishForm() {
-    this.setData({
-      showPublish: true,
-      publishTheme: '',
-      publishContent: '',
-      publishImages: []
-    });
-  },
-
-  hidePublishForm() {
-    this.setData({ showPublish: false });
-  },
-
-  onThemeInput(e) {
-    this.setData({ publishTheme: e.detail.value });
-  },
-
-  onContentInput(e) {
-    this.setData({ publishContent: e.detail.value });
-  },
-
-  chooseImages() {
-    const remain = 9 - (this.data.publishImages || []).length;
-    if (remain <= 0) {
-      wx.showToast({ title: '最多选择9张图片', icon: 'none' });
-      return;
-    }
-    wx.chooseImage({
-      count: remain,
-      sizeType: ['compressed'],
-      sourceType: ['album', 'camera'],
-      success: (res) => {
-        const newImages = [...this.data.publishImages, ...res.tempFilePaths];
-        this.setData({ publishImages: newImages });
-      }
-    });
-  },
-
-  removeImage(e) {
-    const index = e.currentTarget.dataset.index;
-    const images = this.data.publishImages.filter((_, i) => i !== index);
-    this.setData({ publishImages: images });
-  },
-
-  submitPost() {
-    const { publishTheme, publishContent, publishImages } = this.data;
-    if (!publishContent.trim()) {
-      wx.showToast({ title: '内容不能为空', icon: 'none' });
-      return;
-    }
-
-    wx.showLoading({ title: '发布中...' });
-
-    const doPost = (imageUrls) => {
-      request({
-        url: '/api/posts',
-        method: 'POST',
-        data: {
-          type: publishImages.length > 0 ? 'image' : 'text',
-          theme: publishTheme,
-          content: publishContent,
-          images: imageUrls || []
-        }
-      }).then(() => {
-        wx.hideLoading();
-        wx.showToast({ title: '发布成功', icon: 'success' });
-        this.hidePublishForm();
-        this.loadPosts();
-      }).catch(() => {
-        wx.hideLoading();
-      });
-    };
-
-    if (publishImages.length === 0) {
-      return doPost([]);
-    }
-
-    // Upload images first
-    const token = app.globalData.token;
-    const BASE_URL = require('../../config/env').BASE_URL;
-    let uploaded = 0;
-    const urls = [];
-
-    const uploadNext = (i) => {
-      wx.uploadFile({
-        url: `${BASE_URL}/api/upload/image`,
-        filePath: publishImages[i],
-        name: 'files',
-        header: { 'Authorization': `Bearer ${token}` },
-        success: (res) => {
-          try {
-            const data = JSON.parse(res.data);
-            if (data.success && data.data && data.data.urls) {
-              urls.push(...data.data.urls);
-            }
-          } catch (_) {}
-          uploaded++;
-          if (uploaded < publishImages.length) {
-            uploadNext(uploaded);
-          } else {
-            wx.hideLoading();
-            if (urls.length > 0) {
-              doPost(urls);
-            } else {
-              wx.showToast({ title: '图片上传失败', icon: 'none' });
-            }
-          }
-        },
-        fail: () => {
-          uploaded++;
-          if (uploaded < publishImages.length) {
-            uploadNext(uploaded);
-          } else {
-            wx.hideLoading();
-            if (urls.length > 0) {
-              doPost(urls);
-            } else {
-              wx.showToast({ title: '图片上传失败', icon: 'none' });
-            }
-          }
-        }
-      });
-    };
-
-    uploadNext(0);
   },
 
   previewImage(e) {
@@ -336,20 +210,43 @@ Page({
     return { title: '友答 - 编程学习社区', path: '/pages/youda/youda' };
   },
 
+  goToUserProfile(e) {
+    const { openid } = e.currentTarget.dataset;
+    if (!openid) return;
+    if (openid === this.data.myOpenid) {
+      wx.switchTab({ url: '/pages/profile/profile' });
+    } else {
+      wx.navigateTo({ url: `/pages/user-profile/user-profile?openid=${openid}` });
+    }
+  },
+
   followUser(e) {
     const { openid, name, avatar } = e.currentTarget.dataset;
-    request({
-      url: '/api/follow',
-      method: 'POST',
-      data: {
-        followingOpenid: openid,
-        followingName: name || '',
-        followingAvatar: avatar || ''
-      }
-    }).then(() => {
-      wx.showToast({ title: '已关注', icon: 'success' });
-      this.loadFollowing();
-    }).catch(() => {});
+    const isFollowing = this.data.followingOpenids.includes(openid);
+
+    if (isFollowing) {
+      request({
+        url: `/api/follow/${openid}`,
+        method: 'DELETE',
+        showLoading: false
+      }).then(() => {
+        wx.showToast({ title: '已取消关注', icon: 'none' });
+        this.loadFollowing();
+      }).catch(() => {});
+    } else {
+      request({
+        url: '/api/follow',
+        method: 'POST',
+        data: {
+          followingOpenid: openid,
+          followingName: name || '',
+          followingAvatar: avatar || ''
+        }
+      }).then(() => {
+        wx.showToast({ title: '已关注', icon: 'success' });
+        this.loadFollowing();
+      }).catch(() => {});
+    }
   }
 });
 

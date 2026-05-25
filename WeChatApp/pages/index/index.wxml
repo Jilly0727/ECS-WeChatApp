@@ -1,13 +1,13 @@
 <view class="container">
   <!-- 顶部欢迎语 -->
   <view class="header">
-    <text class="title">你好，学习者</text>
+    <text class="title">你好，{{userInfo.nickname || '学习者'}}</text>
     <text class="subtitle">今天想学习点什么？</text>
   </view>
 
   <!-- 功能快捷入口 -->
   <view class="quick-actions">
-    <view class="action-card create-btn" bindtap="goToCommunity">
+    <view class="action-card create-btn" bindtap="showPublishForm">
       <text class="icon">✍️</text>
       <text class="label">发布作品</text>
     </view>
@@ -17,7 +17,7 @@
     </view>
   </view>
 
-  <!-- 推荐课程列表 -->
+  <!-- 热门课程列表 -->
   <view class="section">
     <text class="section-title">热门课程</text>
     <view class="course-list">
@@ -28,8 +28,49 @@
             <text class="course-name">{{item.name}}</text>
             <text class="course-teacher">{{item.teacher}}</text>
           </view>
+          <view class="course-collect">
+            <text class="collect-icon">⭐</text>
+            <text class="collect-count">{{item.collectCount || 0}}</text>
+          </view>
         </view>
       </block>
+    </view>
+  </view>
+
+  <!-- Publish Modal -->
+  <view class="publish-mask" wx:if="{{showPublish}}" bindtap="hidePublishForm" />
+  <view class="publish-panel {{showPublish ? 'show' : ''}}">
+    <view class="publish-header">
+      <text class="cancel" bindtap="hidePublishForm">取消</text>
+      <text class="publish-title">发布作品</text>
+      <text class="confirm" bindtap="submitPost">发布</text>
+    </view>
+    <view class="publish-body">
+      <input
+        class="theme-input"
+        placeholder="输入标题（选填）"
+        value="{{publishTheme}}"
+        bindinput="onThemeInput"
+        maxlength="50"
+      />
+      <textarea
+        class="content-input"
+        placeholder="分享你的编程心得、学习经验..."
+        value="{{publishContent}}"
+        bindinput="onContentInput"
+        auto-height
+        maxlength="2000"
+      />
+      <view class="publish-images-section">
+        <view class="publish-image-item" wx:for="{{publishImages}}" wx:key="index">
+          <image class="publish-image" src="{{item}}" mode="aspectFill" />
+          <view class="remove-image-btn" data-index="{{index}}" bindtap="removeImage">✕</view>
+        </view>
+        <view class="publish-image-add" wx:if="{{publishImages.length < 9}}" bindtap="chooseImages">
+          <text class="add-icon">+</text>
+          <text class="add-text">添加图片</text>
+        </view>
+      </view>
     </view>
   </view>
 </view>

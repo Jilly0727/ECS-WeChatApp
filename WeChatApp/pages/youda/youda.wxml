@@ -18,13 +18,13 @@
     <view class="post-card" wx:for="{{posts}}" wx:key="_id">
       <!-- Header -->
       <view class="post-header">
-        <image class="avatar" src="{{item.avatar}}" mode="aspectFill" />
-        <view class="post-user">
+        <image class="avatar" src="{{item.avatar}}" mode="aspectFill" data-openid="{{item._openid}}" bindtap="goToUserProfile" />
+        <view class="post-user" data-openid="{{item._openid}}" bindtap="goToUserProfile">
           <text class="username">{{item.username}}</text>
           <text class="time">{{item.displayTime}}</text>
         </view>
-        <view class="follow-btn" wx:if="{{item._openid !== myOpenid}}" data-openid="{{item._openid}}" data-name="{{item.username}}" data-avatar="{{item.avatar}}" bindtap="followUser">
-          <text>+关注</text>
+        <view class="follow-btn {{followingOpenids.indexOf(item._openid) > -1 ? 'following' : ''}}" wx:if="{{item._openid !== myOpenid}}" data-openid="{{item._openid}}" data-name="{{item.username}}" data-avatar="{{item.avatar}}" bindtap="followUser">
+          <text>{{followingOpenids.indexOf(item._openid) > -1 ? '已关注' : '+关注'}}</text>
         </view>
         <view class="delete-btn" wx:if="{{item._openid === myOpenid}}" data-id="{{item._id}}" bindtap="deletePost">
           <text>删除</text>
@@ -105,53 +105,16 @@
     <!-- Empty State -->
     <view class="empty" wx:if="{{posts.length === 0}}">
       <text class="empty-icon">📝</text>
-      <text class="empty-text">暂无内容</text>
-      <text class="empty-hint">点击右下角 + 发布第一条作品</text>
+      <text class="empty-text" wx:if="{{activeTab === 0}}">暂无关注动态</text>
+      <text class="empty-hint" wx:if="{{activeTab === 0}}">去关注其他用户，这里会显示他们的作品</text>
+      <text class="empty-text" wx:if="{{activeTab === 1}}">暂无作品</text>
+      <text class="empty-hint" wx:if="{{activeTab === 1}}">去首页发布你的第一个作品</text>
+      <text class="empty-text" wx:if="{{activeTab === 2}}">暂无收藏</text>
+      <text class="empty-hint" wx:if="{{activeTab === 2}}">收藏喜欢的作品，这里会显示</text>
     </view>
 
     <!-- Bottom safe area -->
     <view class="list-footer" />
   </scroll-view>
 
-  <!-- FAB -->
-  <view class="fab" bindtap="showPublishForm">
-    <text class="fab-icon">+</text>
-  </view>
-
-  <!-- Publish Modal -->
-  <view class="publish-mask" wx:if="{{showPublish}}" bindtap="hidePublishForm" />
-  <view class="publish-panel {{showPublish ? 'show' : ''}}">
-    <view class="publish-header">
-      <text class="cancel" bindtap="hidePublishForm">取消</text>
-      <text class="title">发布作品</text>
-      <text class="confirm" bindtap="submitPost">发布</text>
-    </view>
-    <view class="publish-body">
-      <input
-        class="theme-input"
-        placeholder="输入标题（选填）"
-        value="{{publishTheme}}"
-        bindinput="onThemeInput"
-        maxlength="50"
-      />
-      <textarea
-        class="content-input"
-        placeholder="分享你的编程心得、学习经验..."
-        value="{{publishContent}}"
-        bindinput="onContentInput"
-        auto-height
-        maxlength="2000"
-      />
-      <view class="publish-images-section">
-        <view class="publish-image-item" wx:for="{{publishImages}}" wx:key="index">
-          <image class="publish-image" src="{{item}}" mode="aspectFill" />
-          <view class="remove-image-btn" data-index="{{index}}" bindtap="removeImage">✕</view>
-        </view>
-        <view class="publish-image-add" wx:if="{{publishImages.length < 9}}" bindtap="chooseImages">
-          <text class="add-icon">+</text>
-          <text class="add-text">添加图片</text>
-        </view>
-      </view>
-    </view>
-  </view>
 </view>

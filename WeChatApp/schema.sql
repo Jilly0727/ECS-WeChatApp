@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS post_likes (
   INDEX idx_post_id (post_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 收藏表
+-- 帖子收藏表
 CREATE TABLE IF NOT EXISTS post_collects (
   id INT AUTO_INCREMENT PRIMARY KEY,
   post_id INT NOT NULL,
@@ -52,6 +52,17 @@ CREATE TABLE IF NOT EXISTS post_collects (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uk_post_openid (post_id, openid),
   INDEX idx_post_id (post_id),
+  INDEX idx_openid (openid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 课程收藏表
+CREATE TABLE IF NOT EXISTS course_collects (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  course_id INT NOT NULL,
+  openid VARCHAR(64) NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_course_openid (course_id, openid),
+  INDEX idx_course_id (course_id),
   INDEX idx_openid (openid)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
